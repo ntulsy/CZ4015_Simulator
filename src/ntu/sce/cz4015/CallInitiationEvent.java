@@ -5,8 +5,9 @@ public class CallInitiationEvent extends Event {
 	private double position;
 	private double duration;
 	
-	public CallInitiationEvent(double time, double speed, BaseStation station, double position, double duration) {
+	public CallInitiationEvent(int id, double time, double speed, BaseStation station, double position, double duration) {
 		super();
+		this.id = id;
 		this.baseStation = station;
 		this.eventTime = time;
 		this.speed = speed;

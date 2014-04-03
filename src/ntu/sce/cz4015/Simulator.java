@@ -1,10 +1,14 @@
 package ntu.sce.cz4015;
 
+import java.io.*;
 import java.util.*;
 
 
 public class Simulator {
-	private final int initiationEventCount = 2000;
+	private final int initiationEventCount = 1000;
+	private static int hoCount[] = new int[1000];
+	private static int idList[] = new int[1000];
+	private static int index = 0;
 	private PriorityQueue<Event> eventList;
 	private double simulationClock;
 	private BaseStation[] stationList;
@@ -47,14 +51,14 @@ public class Simulator {
 						"D:/EdveNTUre & Data/Year 3 sem 2/CZ4015/Homework/PCS_TEST_DETERMINSTIC_S21314.csv");
 			} catch (Exception e) { }
 			
-			while (in.hasNext()) {
+			for (int i = 0; i < this.initiationEventCount; ++i) {
 				String[] value = in.readOneLine();
-				CallInitiationEvent event = new CallInitiationEvent(
+				CallInitiationEvent event = new CallInitiationEvent(i+1,
 						Double.parseDouble(value[0]),
 						Double.parseDouble(value[3]),
 						stationList[Integer.parseInt(value[1]) - 1], 0,
 						Double.parseDouble(value[2]));
-				System.out.println(event.toString());
+				//System.out.println(event.toString());
 				eventList.add(event);
 			}
 		} else {
@@ -63,7 +67,7 @@ public class Simulator {
 			RandomNumberGenerator rng = new RandomNumberGenerator();
 			for (int i = 0; i < this.initiationEventCount; ++i) {
 				double interArrival = rng.carInterArrival();
-				CallInitiationEvent event = new CallInitiationEvent(
+				CallInitiationEvent event = new CallInitiationEvent(i+1,
 						simulationClock + interArrival, rng.velocity(),
 						stationList[rng.baseStation() - 1],
 						rng.positionInBaseStation(), rng.callDuration());
@@ -86,16 +90,19 @@ public class Simulator {
 	private void handleEvent(Event e){
 		this.simulationClock = e.eventTime; // advance simclock
 		BaseStation currentStation = e.getBaseStation();
-		
+		System.out.println(e.toString());
 		if (e instanceof CallInitiationEvent){
 			if (currentStation.hasFreeChannelForCallInitiation()){
 				currentStation.occupyOneChannel();
 				generateNextEvent((CallInitiationEvent)e);
 			} else {
 				++this.blockedCallCount;
+				Simulator.index++;
 			}
 		} else if (e instanceof CallTerminationEvent){
 			currentStation.releaseOneChannel();
+			Simulator.hoCount[Simulator.index] = ((CallTerminationEvent) e).handoverCount;
+			Simulator.idList[Simulator.index++] = e.id;
 		} else if (e instanceof CallHandoverEvent){
 			BaseStation nextStation = stationList[currentStation.getId() + 1];
 			currentStation.releaseOneChannel();
@@ -103,6 +110,8 @@ public class Simulator {
 				nextStation.occupyOneChannel();
 				generateNextEvent((CallHandoverEvent)e);
 			} else {
+				Simulator.hoCount[Simulator.index] = ((CallHandoverEvent) e).handoverCount;
+				Simulator.idList[Simulator.index++] = e.id;
 				++this.droppedCallCount;
 			}
 			++this.handoverCount;
@@ -112,18 +121,18 @@ public class Simulator {
 	private void generateNextEvent(CallInitiationEvent e){
 		Event event;
 		// calculate time to reach the next base station
-		double remainingDistance = 2000 - e.getPosition();
+		double remainingDistance = 2000.0 - e.getPosition();
 		double speedInMeterPerSecond = e.getSpeed() * 1000.0 / 3600.0;
 		double remainingTimeInThisStation = Math.min(remainingDistance / speedInMeterPerSecond,e.getDuration());
 		if (e.getDuration() > remainingTimeInThisStation && e.getBaseStation().getId() != 19){  
 			// call will be handed over to next station
 			// handover event will be generated
-			event = new CallHandoverEvent(this.simulationClock + remainingTimeInThisStation,
-							e.getSpeed(), e.getBaseStation(), e.getDuration() - remainingTimeInThisStation);
+			event = new CallHandoverEvent(e.id, this.simulationClock + remainingTimeInThisStation,
+							e.getSpeed(), e.getBaseStation(), e.getDuration() - remainingTimeInThisStation, 1);
 		} else {
 			// call will be terminated in this station
-			event = new CallTerminationEvent(this.simulationClock + remainingTimeInThisStation,
-					e.getBaseStation());
+			event = new CallTerminationEvent(e.id, this.simulationClock + remainingTimeInThisStation,
+					e.getBaseStation(), 0);
 		}
 		//System.out.println(event.toString());
 		eventList.add(event);
@@ -138,12 +147,12 @@ public class Simulator {
 			{ 
 			// call will be handed over to next station
 			// handover event will be generated
-			event = new CallHandoverEvent(this.simulationClock + remainingTimeInThisStation,
-							e.getSpeed(), stationList[e.getBaseStation().getId() + 1], e.getDuration() - remainingTimeInThisStation);
+			event = new CallHandoverEvent(e.id, this.simulationClock + remainingTimeInThisStation,
+							e.getSpeed(), stationList[e.getBaseStation().getId() + 1], e.getDuration() - remainingTimeInThisStation, e.handoverCount+1);
 		} else {
 			// call will be terminated in this station
-			event = new CallTerminationEvent(this.simulationClock + remainingTimeInThisStation,
-					stationList[e.getBaseStation().getId() + 1]);
+			event = new CallTerminationEvent(e.id, this.simulationClock + remainingTimeInThisStation,
+					stationList[e.getBaseStation().getId() + 1], e.handoverCount);
 		}
 		//System.out.println(event.toString());
 		eventList.add(event);
@@ -154,7 +163,19 @@ public class Simulator {
 		System.out.println("Blocked Call Percetage:" + (double)this.blockedCallCount/this.initiationEventCount);
 		System.out.println("Dropped Call Count:" + this.droppedCallCount);
 		System.out.println("Handover Count:" + this.handoverCount);
-		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/this.handoverCount);
+		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/this.initiationEventCount);
+		int total = 0;
+		FileWriter out = null;
+		for (int i = 0; i < 1000; ++i){
+			System.out.println(Simulator.hoCount[i]);
+			total += Simulator.hoCount[i];
+		}
+		System.out.println("=================");
+		for (int i = 0; i < 1000; ++i){
+			System.out.println(Simulator.idList[i]);
+		}
+		System.out.println("Handover Count From HOLIST:" + total);
+	
 	}
 	
 	
