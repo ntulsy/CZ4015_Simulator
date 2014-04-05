@@ -5,16 +5,14 @@ import java.util.*;
 
 
 public class Simulator {
-	private final int initiationEventCount = 1000;
-	private static int hoCount[] = new int[1000];
-	private static int idList[] = new int[1000];
-	private static int index = 0;
+	private final int initiationEventCount = 8000;
 	private PriorityQueue<Event> eventList;
 	private double simulationClock;
 	private BaseStation[] stationList;
 	private int blockedCallCount;
 	private int droppedCallCount;
 	private int handoverCount;
+	private static int upToNowCount = 0;
 
 	// anonymous class for priority queue
 	private static Comparator<Event> eventComparator = new Comparator<Event>(){
@@ -26,7 +24,6 @@ public class Simulator {
 				return 1;
 			else
 				return 0;
-			//return (int) (e1.getEventTime() - e2.getEventTime());
 		}
 	};
 		
@@ -71,7 +68,7 @@ public class Simulator {
 						simulationClock + interArrival, rng.velocity(),
 						stationList[rng.baseStation() - 1],
 						rng.positionInBaseStation(), rng.callDuration());
-				System.out.println(event.toString());
+				//System.out.println(event.toString());
 				eventList.add(event);
 				simulationClock += interArrival;
 			}
@@ -90,19 +87,21 @@ public class Simulator {
 	private void handleEvent(Event e){
 		this.simulationClock = e.eventTime; // advance simclock
 		BaseStation currentStation = e.getBaseStation();
-		System.out.println(e.toString());
+		//System.out.println(e.toString());
 		if (e instanceof CallInitiationEvent){
 			if (currentStation.hasFreeChannelForCallInitiation()){
 				currentStation.occupyOneChannel();
 				generateNextEvent((CallInitiationEvent)e);
 			} else {
 				++this.blockedCallCount;
-				Simulator.index++;
 			}
+			// output percentage for determining warm up period
+			Simulator.upToNowCount++;
+			System.out.print((double)this.blockedCallCount/Simulator.upToNowCount + ",");
+			System.out.println((double)this.droppedCallCount/Simulator.upToNowCount);
+			
 		} else if (e instanceof CallTerminationEvent){
 			currentStation.releaseOneChannel();
-			Simulator.hoCount[Simulator.index] = ((CallTerminationEvent) e).handoverCount;
-			Simulator.idList[Simulator.index++] = e.id;
 		} else if (e instanceof CallHandoverEvent){
 			BaseStation nextStation = stationList[currentStation.getId() + 1];
 			currentStation.releaseOneChannel();
@@ -110,8 +109,6 @@ public class Simulator {
 				nextStation.occupyOneChannel();
 				generateNextEvent((CallHandoverEvent)e);
 			} else {
-				Simulator.hoCount[Simulator.index] = ((CallHandoverEvent) e).handoverCount;
-				Simulator.idList[Simulator.index++] = e.id;
 				++this.droppedCallCount;
 			}
 			++this.handoverCount;
@@ -134,7 +131,6 @@ public class Simulator {
 			event = new CallTerminationEvent(e.id, this.simulationClock + remainingTimeInThisStation,
 					e.getBaseStation(), 0);
 		}
-		//System.out.println(event.toString());
 		eventList.add(event);
 	}
 	
@@ -154,7 +150,6 @@ public class Simulator {
 			event = new CallTerminationEvent(e.id, this.simulationClock + remainingTimeInThisStation,
 					stationList[e.getBaseStation().getId() + 1], e.handoverCount);
 		}
-		//System.out.println(event.toString());
 		eventList.add(event);
 	}
 	
@@ -164,27 +159,23 @@ public class Simulator {
 		System.out.println("Dropped Call Count:" + this.droppedCallCount);
 		System.out.println("Handover Count:" + this.handoverCount);
 		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/this.initiationEventCount);
-		int total = 0;
-		FileWriter out = null;
-		for (int i = 0; i < 1000; ++i){
-			System.out.println(Simulator.hoCount[i]);
-			total += Simulator.hoCount[i];
-		}
-		System.out.println("=================");
-		for (int i = 0; i < 1000; ++i){
-			System.out.println(Simulator.idList[i]);
-		}
-		System.out.println("Handover Count From HOLIST:" + total);
-	
 	}
-	
 	
 	public static void main(String[] args) {
 		Simulator sim = new Simulator();
-		sim.init();
-		sim.readInEvents(true);
-		sim.startSimulation();
-		sim.printStatistics();
+		double totalBlockRate = 0;
+		double  totalDropRate = 0;
+		for (int i = 0; i < 1; ++i)
+		{
+			sim.init();
+			sim.readInEvents(false);
+			sim.startSimulation();
+			sim.printStatistics();
+			totalBlockRate += (double)sim.blockedCallCount/sim.initiationEventCount;
+			totalDropRate += (double)sim.droppedCallCount/sim.initiationEventCount;
+		}
+		System.out.println("AVE Blocked:" + totalBlockRate / 100);
+		System.out.println("AVE Dropped:" + totalDropRate / 100);
 	}
 
 }
