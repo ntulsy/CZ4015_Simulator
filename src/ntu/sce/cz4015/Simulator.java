@@ -12,7 +12,7 @@ public class Simulator {
 	private int blockedCallCount;
 	private int droppedCallCount;
 	private int handoverCount;
-	private static int upToNowCount = 0;
+	private static int countUpToNow;
 
 	// anonymous class for priority queue
 	private static Comparator<Event> eventComparator = new Comparator<Event>(){
@@ -34,6 +34,7 @@ public class Simulator {
 		blockedCallCount = 0;
 		droppedCallCount = 0;
 		handoverCount = 0;
+		Simulator.countUpToNow = 0;
 
 		for (int i = 0; i < 20; ++i)
 			stationList[i] = new BaseStation(i);
@@ -95,10 +96,12 @@ public class Simulator {
 			} else {
 				++this.blockedCallCount;
 			}
-			// output percentage for determining warm up period
-			Simulator.upToNowCount++;
-			System.out.print((double)this.blockedCallCount/Simulator.upToNowCount + ",");
-			System.out.println((double)this.droppedCallCount/Simulator.upToNowCount);
+			++Simulator.countUpToNow;
+			if (Simulator.countUpToNow == 4000){
+				this.handoverCount= 0;
+				this.blockedCallCount = 0;
+				this.droppedCallCount = 0;
+			}
 			
 		} else if (e instanceof CallTerminationEvent){
 			currentStation.releaseOneChannel();
@@ -155,24 +158,26 @@ public class Simulator {
 	
 	public void printStatistics(){
 		System.out.println("Blocked Call Count:" + this.blockedCallCount);
-		System.out.println("Blocked Call Percetage:" + (double)this.blockedCallCount/this.initiationEventCount);
+		System.out.println("Blocked Call Percetage:" + (double)this.blockedCallCount/(this.initiationEventCount-4000));
 		System.out.println("Dropped Call Count:" + this.droppedCallCount);
 		System.out.println("Handover Count:" + this.handoverCount);
-		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/this.initiationEventCount);
+		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/(this.initiationEventCount-4000));
 	}
 	
 	public static void main(String[] args) {
 		Simulator sim = new Simulator();
 		double totalBlockRate = 0;
 		double  totalDropRate = 0;
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 100; ++i)
 		{
 			sim.init();
 			sim.readInEvents(false);
 			sim.startSimulation();
-			sim.printStatistics();
-			totalBlockRate += (double)sim.blockedCallCount/sim.initiationEventCount;
-			totalDropRate += (double)sim.droppedCallCount/sim.initiationEventCount;
+			//sim.printStatistics();
+			System.out.print((double)sim.blockedCallCount/(sim.initiationEventCount-4000) + ",");
+			System.out.println((double)sim.droppedCallCount/(sim.initiationEventCount-4000));
+			totalBlockRate += (double)sim.blockedCallCount/(sim.initiationEventCount-4000);
+			totalDropRate += (double)sim.droppedCallCount/(sim.initiationEventCount-4000);
 		}
 		System.out.println("AVE Blocked:" + totalBlockRate / 100);
 		System.out.println("AVE Dropped:" + totalDropRate / 100);

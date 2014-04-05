@@ -2,7 +2,7 @@ package ntu.sce.cz4015;
 
 public class BaseStation {
 	
-	private final int reservedForHandover = 1;
+	private final int reservedForHandover = 0;
 
 	private int busyChannel;
 	private int freeChannel;
