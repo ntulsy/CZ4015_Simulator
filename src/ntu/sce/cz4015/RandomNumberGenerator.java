@@ -3,7 +3,7 @@ package ntu.sce.cz4015;
 public class RandomNumberGenerator {
 	
 	private final double carInterArrivalTimeMean = 1.36981692647652;
-	private final double callDurationMean = 109.835900738747;
+	private final double callDurationMean = 99.835900738747;
 	private final double velocityMean = 120.072098016858;
 	private final double velocityVariance = 9.01905789789691;
 	
@@ -20,7 +20,7 @@ public class RandomNumberGenerator {
 	}
 
 	public double callDuration() {
-		return ExponentialRN(callDurationMean);
+		return 10 + ExponentialRN(callDurationMean);
 	}
 
 	public double velocity() {
