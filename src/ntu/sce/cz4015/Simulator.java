@@ -6,6 +6,7 @@ import java.util.*;
 
 public class Simulator {
 	private final int initiationEventCount = 8000;
+	private final int warmUpPeriod = 3000;
 	private PriorityQueue<Event> eventList;
 	private double simulationClock;
 	private BaseStation[] stationList;
@@ -97,7 +98,7 @@ public class Simulator {
 				++this.blockedCallCount;
 			}
 			++Simulator.countUpToNow;
-			if (Simulator.countUpToNow == 4000){
+			if (Simulator.countUpToNow == this.warmUpPeriod){
 				this.handoverCount= 0;
 				this.blockedCallCount = 0;
 				this.droppedCallCount = 0;
@@ -158,10 +159,10 @@ public class Simulator {
 	
 	public void printStatistics(){
 		System.out.println("Blocked Call Count:" + this.blockedCallCount);
-		System.out.println("Blocked Call Percetage:" + (double)this.blockedCallCount/(this.initiationEventCount-4000));
+		System.out.println("Blocked Call Percetage:" + (double)this.blockedCallCount/(this.initiationEventCount-this.warmUpPeriod));
 		System.out.println("Dropped Call Count:" + this.droppedCallCount);
 		System.out.println("Handover Count:" + this.handoverCount);
-		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/(this.initiationEventCount-4000));
+		System.out.println("Dropped Call Percetage:" + (double)this.droppedCallCount/(this.initiationEventCount-this.warmUpPeriod));
 	}
 	
 	public static void main(String[] args) {
@@ -174,10 +175,10 @@ public class Simulator {
 			sim.readInEvents(false);
 			sim.startSimulation();
 			//sim.printStatistics();
-			System.out.print((double)sim.blockedCallCount/(sim.initiationEventCount-4000) + ",");
-			System.out.println((double)sim.droppedCallCount/(sim.initiationEventCount-4000));
-			totalBlockRate += (double)sim.blockedCallCount/(sim.initiationEventCount-4000);
-			totalDropRate += (double)sim.droppedCallCount/(sim.initiationEventCount-4000);
+			System.out.print((double)sim.blockedCallCount/(sim.initiationEventCount-sim.warmUpPeriod) + ",");
+			System.out.println((double)sim.droppedCallCount/(sim.initiationEventCount-sim.warmUpPeriod));
+			totalBlockRate += (double)sim.blockedCallCount/(sim.initiationEventCount-sim.warmUpPeriod);
+			totalDropRate += (double)sim.droppedCallCount/(sim.initiationEventCount-sim.warmUpPeriod);
 		}
 		System.out.println("AVE Blocked:" + totalBlockRate / 100);
 		System.out.println("AVE Dropped:" + totalDropRate / 100);
